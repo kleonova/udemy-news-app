@@ -70,8 +70,25 @@ const newsService = (function () {
     }
 })();
 
+const searchForm = document.forms["searchNews"];
+const searchFormCountry = searchForm.elements["country"];
+const searchFormQuery = searchForm.elements["search"];
+
+searchForm.addEventListener('submit', event => {
+    event.preventDefault();
+    loadNews();
+})
+
 function loadNews() {
-    newsService.topHeadlines("ru", onGetResponse);
+    const country = searchFormCountry.value;
+    const searchQuery = searchFormQuery.value;
+
+    if (!searchQuery) {
+        newsService.topHeadlines(country, onGetResponse);
+    } else {
+        newsService.everything(searchQuery, onGetResponse);
+    }
+
 }
 
 //  init selects
@@ -80,7 +97,18 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function onGetResponse(error, response) {
-    renderNews(response?.articles);
+    if (error) {
+        console.error(error);
+        return;
+    }
+
+    if (!response?.articles || !response.articles.length) {
+        console.warn('news not found');
+        return;
+    }
+
+    clearContainer();
+    renderNews(response.articles);
 }
 
 function renderNews(articles) {
@@ -89,6 +117,11 @@ function renderNews(articles) {
         const el = articleTemplate(article);
         newsContainer.appendChild(el)
     })
+}
+
+function clearContainer() {
+    const newsContainer = document.getElementById("newsContainer");
+    newsContainer.innerHTML = '';
 }
 
 function articleTemplate(article) {
@@ -102,11 +135,6 @@ function articleTemplate(article) {
         articleElementHeader.appendChild(document.createElement('span').appendChild(document.createTextNode(article.author)));
     }
     // articleElementHeader.appendChild(document.createElement('span').appendChild(document.createTextNode(article.publishedAt)));
-
-    const articleElementImg = document.createElement('img');
-    if (article?.urlToImage) {
-        articleElementImg.src = article.urlToImage;
-    }
 
     const articleElementBody = document.createElement('div');
     articleElementBody.classList.add("card-body");
@@ -136,7 +164,13 @@ function articleTemplate(article) {
     }
 
     articleElement.appendChild(articleElementHeader);
-    articleElement.appendChild(articleElementImg);
+
+    if (article?.urlToImage) {
+        const articleElementImg = document.createElement('img');
+        articleElementImg.src = article.urlToImage;
+        articleElement.appendChild(articleElementImg);
+    }
+
     articleElement.appendChild(articleElementBody);
     articleElement.appendChild(articleElementFooter);
 
